@@ -1,4 +1,4 @@
-//import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
 import java.io.File;
 import java.io.IOException;
@@ -10,14 +10,15 @@ import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.util.CellRangeAddress;
 import java.util.ArrayList;
-public class ExcelReader {
-    public static final String SAMPLE_XLSX_FILE_PATH = "table_old.xls";
 
-    public static void main(String[] args) throws IOException{//, InvalidFormatException {
+public class ExcelReader {
+    public static final String SAMPLE_XLSX_FILE_PATH = "/Users/imazze/Downloads/TableToIcal/table_new.xls";
+
+    public static void main(String[] args) throws IOException, InvalidFormatException {
 
         // Creating a Workbook from an Excel file (.xls or .xlsx)
         Workbook workbook = WorkbookFactory.create(new File(SAMPLE_XLSX_FILE_PATH));
-
+        
         // Retrieving the number of sheets in the Workbook
         System.out.println("Workbook has " + workbook.getNumberOfSheets() + " Sheets : ");
 
@@ -141,8 +142,7 @@ public class ExcelReader {
     static ArrayList<Vorlesung> getDaysEvents(Sheet s, int c_row, int c_cell, java.util.Date day)
     {
         ArrayList<Vorlesung> events = new ArrayList<Vorlesung>();
-        //System.out.println("Events for row/cell " + c_row + "/" + c_cell);
-
+        //System.out.print("Events for row/cell " + c_row + "/" + c_cell);
         
         for(int i = 0; i < 12; i++)
         {
@@ -155,8 +155,15 @@ public class ExcelReader {
                     if(cell.getCellType() == CellType.BLANK){
                         if(isMergedCell(s, c_row + i, c_cell))
                         {
-                            //System.out.println( i + ":" + "MERGED" + "\t");
-                            events.get(events.size()-1).setEndTime(getTimeLikeNumber(i, true));
+                            System.out.println( i + ":" + "MERGED" + "\t");
+                            if(events.size() != 0)
+                            {
+                                events.get(events.size()-1).setEndTime(getTimeLikeNumber(i, true));
+                            } else // An diesem Tag sind keine Vorlesungen
+                            {
+                                break;
+                            }
+                            
                         }
                         else
                         {
@@ -167,18 +174,34 @@ public class ExcelReader {
                         //System.out.println( i + ":" + "none" + "\t");
                     } else if(cell.getCellType() == CellType.STRING)
                     {
-                        //System.out.println( i + ":" + cell + "\t");
+                        System.out.println( i + ":" + cell + "\t");
                         events.add(new Vorlesung(cell + "", day));
                         events.get(events.size()-1).setStartTime(getTimeLikeNumber(i, false));
                     }
 
                 }
-            }
+            }else
+                {
+                    if(isInfoBox(s, c_row+7, c_cell))
+                    {
+                        System.out.println("Infobox");
+                        // Dont go further
+                        break;
+                    }
+                }
 
         }
         return events;
     }
 
+    static boolean isInfoBox(Sheet sheet, int row, int column) {
+        for (CellRangeAddress range : sheet.getMergedRegions()) {
+            if (range.isInRange(row, column) && range.isInRange(row, column+1)) {
+                return true;
+            }
+        }
+        return false;
+    }
     static String getTimeLikeNumber(int i, boolean end)
     {
         if(!end)
